@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useModal, usePhantom } from '@phantom/react-sdk';
 import { Header } from '@/components/Header';
+import { PriceChart } from '@/components/PriceChart';
 
 // Types
 interface Bet {
   type: 'yes' | 'no';
-  x: number; // position on timeline (0-100)
+  x: number;
 }
 
 interface PriceLevel {
@@ -15,6 +16,11 @@ interface PriceLevel {
   yes: number;
   no: number;
   dots: Bet[];
+}
+
+interface PricePoint {
+  time: number;
+  price: number;
 }
 
 // Initial mock data
@@ -28,6 +34,18 @@ const INITIAL_PRICE_LEVELS: PriceLevel[] = [
   { price: 50000, yes: 4, no: 1, dots: [{ type: 'yes', x: 30 }, { type: 'yes', x: 38 }, { type: 'yes', x: 55 }, { type: 'no', x: 72 }, { type: 'yes', x: 85 }] },
   { price: 25000, yes: 2, no: 0, dots: [{ type: 'yes', x: 45 }, { type: 'yes', x: 62 }] },
 ];
+
+// Generate initial price history (simulating past hours)
+const generateInitialHistory = (): PricePoint[] => {
+  const points: PricePoint[] = [];
+  let price = 60000;
+  for (let t = 0; t <= 70; t += 2) {
+    price += (Math.random() - 0.45) * 15000;
+    price = Math.max(30000, Math.min(200000, price));
+    points.push({ time: t, price });
+  }
+  return points;
+};
 
 const AMOUNTS = [0.5, 1, 2, 5];
 const MULTIPLIER_TIERS = [
@@ -90,17 +108,14 @@ const styles = {
   },
   chartPanel: {
     flex: 1,
-    backgroundColor: '#000',
-    border: '1px solid #333',
-    padding: '24px',
     display: 'flex',
     flexDirection: 'column' as const,
+    gap: '16px',
   },
   chartHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: '16px',
   },
   headerLeft: {
     display: 'flex',
@@ -128,7 +143,7 @@ const styles = {
   },
   settlementValue: {
     color: '#22c55e',
-    fontSize: '16px',
+    fontSize: '18px',
     fontFamily: 'monospace',
     fontWeight: 600,
   },
@@ -136,61 +151,73 @@ const styles = {
     color: '#666',
     fontSize: '14px',
   },
-  chartArea: {
-    flex: 1,
-    position: 'relative' as const,
+  breakpointsPanel: {
+    backgroundColor: '#000',
+    border: '1px solid #333',
+    padding: '16px',
   },
-  priceRow: {
+  breakpointsTitle: {
+    color: '#666',
+    fontSize: '11px',
+    letterSpacing: '0.1em',
+    marginBottom: '12px',
+  },
+  breakpointRow: {
     display: 'flex',
     alignItems: 'center',
-    height: '48px',
+    padding: '8px 0',
     cursor: 'pointer',
     transition: 'background-color 0.2s',
   },
-  priceLabel: {
-    width: '64px',
-    color: '#666',
-    fontSize: '14px',
+  breakpointPrice: {
+    width: '70px',
+    color: '#888',
+    fontSize: '13px',
     fontFamily: 'monospace',
   },
-  dotsArea: {
+  breakpointBar: {
     flex: 1,
-    position: 'relative' as const,
-    height: '100%',
+    height: '20px',
+    display: 'flex',
+    gap: '2px',
   },
-  horizontalLine: {
-    position: 'absolute' as const,
-    top: '50%',
-    left: 0,
-    right: '100px',
-    height: '1px',
-    backgroundColor: '#222',
-  },
-  settlementLine: {
-    position: 'absolute' as const,
-    left: 0,
-    right: '100px',
-    height: '2px',
+  yesBar: {
     backgroundColor: '#22c55e',
-    boxShadow: '0 0 10px #22c55e',
-    transition: 'top 0.5s ease-out',
-    zIndex: 10,
+    height: '100%',
+    transition: 'width 0.3s',
   },
-  dot: {
-    position: 'absolute' as const,
-    top: '50%',
-    transform: 'translateY(-50%)',
-    width: '12px',
-    height: '12px',
+  noBar: {
+    backgroundColor: '#ef4444',
+    height: '100%',
+    transition: 'width 0.3s',
   },
-  betCounts: {
+  breakpointCounts: {
     width: '100px',
     textAlign: 'right' as const,
-    fontSize: '12px',
+    fontSize: '11px',
     fontFamily: 'monospace',
   },
+  activityFeed: {
+    backgroundColor: '#000',
+    border: '1px solid #333',
+    padding: '16px',
+    maxHeight: '150px',
+    overflow: 'auto',
+  },
+  activityTitle: {
+    color: '#666',
+    fontSize: '11px',
+    letterSpacing: '0.1em',
+    marginBottom: '8px',
+  },
+  activityItem: {
+    color: '#555',
+    fontSize: '12px',
+    padding: '4px 0',
+    borderBottom: '1px solid #1a1a1a',
+  },
   betPanel: {
-    width: '360px',
+    width: '340px',
     backgroundColor: '#000',
     border: '1px solid #333',
     padding: '24px',
@@ -314,22 +341,6 @@ const styles = {
     transition: 'all 0.2s',
     marginTop: 'auto',
   },
-  activityFeed: {
-    borderTop: '1px solid #222',
-    paddingTop: '16px',
-    marginTop: '16px',
-  },
-  activityTitle: {
-    color: '#666',
-    fontSize: '11px',
-    letterSpacing: '0.1em',
-    marginBottom: '8px',
-  },
-  activityItem: {
-    color: '#444',
-    fontSize: '12px',
-    padding: '4px 0',
-  },
 };
 
 export default function Home() {
@@ -340,78 +351,63 @@ export default function Home() {
   const [selectedBreakpoint, setSelectedBreakpoint] = useState<number | null>(null);
   const [prediction, setPrediction] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState<number>(1);
-  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
   const [settlementPrice, setSettlementPrice] = useState<number>(87500);
+  const [priceHistory, setPriceHistory] = useState<PricePoint[]>(generateInitialHistory);
   const [countdown, setCountdown] = useState({ hours: 18, minutes: 42, seconds: 31 });
   const [activities, setActivities] = useState<string[]>([]);
+  const [timeProgress, setTimeProgress] = useState(70);
 
-  // Calculate total bets
   const totalBets = priceLevels.reduce((sum, level) => sum + level.yes + level.no, 0);
-  const totalSOL = priceLevels.reduce((sum, level) => sum + (level.yes + level.no) * 15, 0); // rough estimate
+  const totalSOL = priceLevels.reduce((sum, level) => sum + (level.yes + level.no) * 15, 0);
 
-  // Format price
   const formatPrice = (price: number) => {
     if (price >= 1000000) return `$${(price / 1000000).toFixed(1)}M`;
     if (price >= 1000) return `$${price / 1000}k`;
     return `$${price}`;
   };
 
-  // Calculate settlement price based on YES/NO distribution
   const calculateSettlement = useCallback(() => {
-    let bestEquilibrium = priceLevels[Math.floor(priceLevels.length / 2)].price;
-    let bestDiff = Infinity;
-
-    for (let i = 0; i < priceLevels.length; i++) {
-      const yesAbove = priceLevels.slice(i).reduce((sum, l) => sum + l.yes, 0);
-      const noBelow = priceLevels.slice(0, i).reduce((sum, l) => sum + l.no, 0);
-      const diff = Math.abs(yesAbove - noBelow);
-      
-      if (diff < bestDiff) {
-        bestDiff = diff;
-        bestEquilibrium = priceLevels[i].price;
-      }
-    }
-    
-    // Add some randomness for demo effect
+    let total = 0;
+    let weightedSum = 0;
+    priceLevels.forEach(level => {
+      const netBets = level.yes - level.no * 0.5;
+      weightedSum += level.price * netBets;
+      total += Math.abs(netBets);
+    });
+    const base = total > 0 ? weightedSum / total : 100000;
     const variance = (Math.random() - 0.5) * 20000;
-    return Math.max(25000, Math.min(250000, bestEquilibrium + variance));
+    return Math.max(25000, Math.min(250000, base + variance));
   }, [priceLevels]);
 
-  // Calculate accuracy for a given breakpoint
   const calculateAccuracy = (breakpoint: number, settlement: number, betType: 'yes' | 'no') => {
     const distance = Math.abs(breakpoint - settlement);
     const baseAccuracy = 1 / (1 + Math.pow(distance / settlement, 2));
-    
-    // Penalty for wrong direction
     const isCorrect = betType === 'yes' ? settlement >= breakpoint : settlement < breakpoint;
     return isCorrect ? baseAccuracy : baseAccuracy * 0.67;
   };
 
-  // Get multiplier for a breakpoint
   const getMultiplier = (breakpoint: number) => {
     const level = priceLevels.find(l => l.price === breakpoint);
     if (!level) return 1.5;
-    
-    const totalSOLOnBreakpoint = (level.yes + level.no) * 20; // rough SOL estimate
+    const totalSOLOnBreakpoint = (level.yes + level.no) * 20;
     const tier = MULTIPLIER_TIERS.find(t => totalSOLOnBreakpoint < t.threshold + 100) || MULTIPLIER_TIERS[MULTIPLIER_TIERS.length - 1];
     return tier.multiplier;
   };
 
-  // Calculate potential tokens
   const calculateTokens = (breakpoint: number, sol: number, settlement: number) => {
     const accuracy = calculateAccuracy(breakpoint, settlement, prediction);
     const multiplier = getMultiplier(breakpoint);
     const weight = sol * accuracy * multiplier;
-    const totalWeight = 500; // simplified total
+    const totalWeight = 500;
     const tokens = 800000000 * (weight / totalWeight);
     return { tokens, accuracy, multiplier };
   };
 
-  // Simulate activity
+  // Simulate activity and update price history
   useEffect(() => {
     const interval = setInterval(() => {
       // Random bet simulation
-      if (Math.random() > 0.6) {
+      if (Math.random() > 0.5) {
         const randomLevel = priceLevels[Math.floor(Math.random() * priceLevels.length)];
         const betType = Math.random() > 0.5 ? 'yes' : 'no';
         const betAmount = [0.5, 1, 2, 5][Math.floor(Math.random() * 4)];
@@ -430,18 +426,24 @@ export default function Home() {
           return newLevels;
         });
 
-        // Add activity
-        const names = ['anon', 'whale.sol', 'degen_42', 'early_bird', 'diamond_hands'];
+        const names = ['anon', 'whale.sol', 'degen_42', 'early_bird', 'diamond_hands', 'ser_pump', 'moon_boy'];
         const name = names[Math.floor(Math.random() * names.length)];
         setActivities(prev => [
-          `${name} bet ${betAmount} SOL ${betType.toUpperCase()} on ${formatPrice(randomLevel.price)}`,
-          ...prev.slice(0, 4)
+          `${name} bet ${betAmount} SOL ${betType.toUpperCase()} @ ${formatPrice(randomLevel.price)}`,
+          ...prev.slice(0, 6)
         ]);
       }
 
-      // Update settlement
-      setSettlementPrice(calculateSettlement());
-    }, 3000);
+      // Update settlement and price history
+      const newSettlement = calculateSettlement();
+      setSettlementPrice(newSettlement);
+      
+      setTimeProgress(prev => {
+        const newTime = Math.min(95, prev + 0.5);
+        setPriceHistory(history => [...history, { time: newTime, price: newSettlement }]);
+        return newTime;
+      });
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [priceLevels, calculateSettlement]);
@@ -452,14 +454,8 @@ export default function Home() {
       setCountdown(prev => {
         let { hours, minutes, seconds } = prev;
         seconds--;
-        if (seconds < 0) {
-          seconds = 59;
-          minutes--;
-        }
-        if (minutes < 0) {
-          minutes = 59;
-          hours--;
-        }
+        if (seconds < 0) { seconds = 59; minutes--; }
+        if (minutes < 0) { minutes = 59; hours--; }
         if (hours < 0) hours = 0;
         return { hours, minutes, seconds };
       });
@@ -473,12 +469,11 @@ export default function Home() {
       return;
     }
     if (selectedBreakpoint) {
-      // Add user's bet to the chart
       setPriceLevels(prev => {
         const newLevels = [...prev];
         const levelIndex = newLevels.findIndex(l => l.price === selectedBreakpoint);
         if (levelIndex !== -1) {
-          const newDot: Bet = { type: prediction, x: 90 };
+          const newDot: Bet = { type: prediction, x: timeProgress };
           newLevels[levelIndex] = {
             ...newLevels[levelIndex],
             [prediction]: newLevels[levelIndex][prediction] + 1,
@@ -487,27 +482,17 @@ export default function Home() {
         }
         return newLevels;
       });
-      
       setActivities(prev => [
-        `You bet ${amount} SOL ${prediction.toUpperCase()} on ${formatPrice(selectedBreakpoint)}`,
-        ...prev.slice(0, 4)
+        `You bet ${amount} SOL ${prediction.toUpperCase()} @ ${formatPrice(selectedBreakpoint)}`,
+        ...prev.slice(0, 6)
       ]);
     }
-  };
-
-  // Calculate settlement line position
-  const getSettlementLinePosition = () => {
-    const prices = priceLevels.map(l => l.price);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const range = maxPrice - minPrice;
-    const position = ((settlementPrice - minPrice) / range) * 100;
-    return Math.max(0, Math.min(100, 100 - position)); // Invert because 0 is top
   };
 
   const selectedLevel = priceLevels.find(l => l.price === selectedBreakpoint);
   const currentMultiplier = selectedBreakpoint ? getMultiplier(selectedBreakpoint) : 1.5;
   const solOnBreakpoint = selectedLevel ? (selectedLevel.yes + selectedLevel.no) * 20 : 0;
+  const maxBets = Math.max(...priceLevels.map(l => l.yes + l.no));
 
   return (
     <>
@@ -520,6 +505,10 @@ export default function Home() {
             <span style={styles.projectTitle}>$DEMO Token Launch</span>
           </div>
           <div style={styles.phaseIndicator}>PREDICT PHASE</div>
+          <div style={styles.settlementDisplay}>
+            <span style={styles.settlementLabel}>CURRENT SETTLEMENT</span>
+            <span style={styles.settlementValue}>{formatPrice(settlementPrice)}</span>
+          </div>
           <div style={styles.countdown}>
             {String(countdown.hours).padStart(2, '0')}:
             {String(countdown.minutes).padStart(2, '0')}:
@@ -529,69 +518,67 @@ export default function Home() {
 
         {/* Main Content */}
         <div style={styles.content}>
-          {/* Chart Panel */}
+          {/* Left Panel - Charts */}
           <div style={styles.chartPanel}>
+            {/* Header */}
             <div style={styles.chartHeader}>
               <div style={styles.headerLeft}>
                 <span style={styles.orangeDot}></span>
-                <span style={styles.headerText}>CLICK TO SELECT BREAKPOINT</span>
-              </div>
-              <div style={styles.settlementDisplay}>
-                <span style={styles.settlementLabel}>SETTLEMENT</span>
-                <span style={styles.settlementValue}>{formatPrice(settlementPrice)}</span>
+                <span style={styles.headerText}>CLICK CHART TO SELECT BREAKPOINT</span>
               </div>
               <span style={styles.betsCount}>{totalBets} bets · ~{totalSOL} SOL</span>
             </div>
 
-            <div style={styles.chartArea}>
-              {/* Settlement Line */}
-              <div style={{
-                ...styles.settlementLine,
-                top: `${getSettlementLinePosition()}%`,
-              }}></div>
+            {/* Price Chart */}
+            <PriceChart
+              priceHistory={priceHistory}
+              currentPrice={settlementPrice}
+              minPrice={20000}
+              maxPrice={280000}
+              onSelectPrice={setSelectedBreakpoint}
+              selectedPrice={selectedBreakpoint}
+            />
 
-              {priceLevels.map((level) => (
-                <div 
-                  key={level.price}
-                  onClick={() => setSelectedBreakpoint(level.price)}
-                  onMouseEnter={() => setHoveredRow(level.price)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  style={{
-                    ...styles.priceRow,
-                    backgroundColor: selectedBreakpoint === level.price 
-                      ? '#111' 
-                      : hoveredRow === level.price 
-                        ? '#0a0a0a' 
-                        : 'transparent',
-                  }}
-                >
-                  <div style={styles.priceLabel}>{formatPrice(level.price)}</div>
-                  <div style={styles.dotsArea}>
-                    <div style={styles.horizontalLine}></div>
-                    {level.dots.map((dot, dotIndex) => (
-                      <div
-                        key={dotIndex}
-                        style={{
-                          ...styles.dot,
-                          backgroundColor: dot.type === 'yes' ? '#22c55e' : '#ef4444',
-                          left: `${dot.x}%`,
-                        }}
-                      ></div>
-                    ))}
+            {/* Breakpoints Distribution */}
+            <div style={styles.breakpointsPanel}>
+              <div style={styles.breakpointsTitle}>BET DISTRIBUTION BY BREAKPOINT</div>
+              {priceLevels.map(level => {
+                const total = level.yes + level.no;
+                const yesWidth = total > 0 ? (level.yes / maxBets) * 100 : 0;
+                const noWidth = total > 0 ? (level.no / maxBets) * 100 : 0;
+                const isSelected = selectedBreakpoint === level.price;
+                
+                return (
+                  <div 
+                    key={level.price}
+                    onClick={() => setSelectedBreakpoint(level.price)}
+                    style={{
+                      ...styles.breakpointRow,
+                      backgroundColor: isSelected ? '#111' : 'transparent',
+                    }}
+                  >
+                    <div style={{
+                      ...styles.breakpointPrice,
+                      color: isSelected ? '#fff' : '#888',
+                    }}>{formatPrice(level.price)}</div>
+                    <div style={styles.breakpointBar}>
+                      <div style={{ ...styles.yesBar, width: `${yesWidth}%` }}></div>
+                      <div style={{ ...styles.noBar, width: `${noWidth}%` }}></div>
+                    </div>
+                    <div style={styles.breakpointCounts}>
+                      <span style={{ color: '#22c55e' }}>{level.yes}</span>
+                      <span style={{ color: '#333' }}> / </span>
+                      <span style={{ color: '#ef4444' }}>{level.no}</span>
+                    </div>
                   </div>
-                  <div style={styles.betCounts}>
-                    {level.yes > 0 && <span style={{ color: '#22c55e' }}>{level.yes} YES</span>}
-                    {level.yes > 0 && level.no > 0 && <span style={{ color: '#333' }}> </span>}
-                    {level.no > 0 && <span style={{ color: '#ef4444' }}>{level.no} NO</span>}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Activity Feed */}
             {activities.length > 0 && (
               <div style={styles.activityFeed}>
-                <div style={styles.activityTitle}>RECENT ACTIVITY</div>
+                <div style={styles.activityTitle}>LIVE ACTIVITY</div>
                 {activities.map((activity, i) => (
                   <div key={i} style={styles.activityItem}>{activity}</div>
                 ))}
@@ -599,11 +586,10 @@ export default function Home() {
             )}
           </div>
 
-          {/* Bet Panel */}
+          {/* Right Panel - Bet */}
           <div style={styles.betPanel}>
             <div style={styles.panelTitle}>PLACE YOUR BET</div>
 
-            {/* Selected Breakpoint */}
             <div style={styles.section}>
               <div style={styles.label}>SELECTED BREAKPOINT</div>
               <div style={styles.breakpointValue}>
@@ -611,7 +597,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Prediction Toggle */}
             <div style={styles.section}>
               <div style={styles.label}>YOUR PREDICTION</div>
               <div style={styles.toggleContainer}>
@@ -641,7 +626,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Amount */}
             <div style={styles.section}>
               <div style={styles.label}>AMOUNT (SOL)</div>
               <div style={styles.amountContainer}>
@@ -661,7 +645,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Multiplier */}
             {selectedBreakpoint && (
               <div style={styles.multiplierBox}>
                 <div style={styles.multiplierRow}>
@@ -669,12 +652,11 @@ export default function Home() {
                   <span style={styles.multiplierValue}>{currentMultiplier.toFixed(1)}x</span>
                 </div>
                 <div style={styles.multiplierHint}>
-                  {solOnBreakpoint.toFixed(0)} SOL already on this breakpoint
+                  {solOnBreakpoint.toFixed(0)} SOL on this breakpoint
                 </div>
               </div>
             )}
 
-            {/* Token Calculator */}
             {selectedBreakpoint && (
               <div style={styles.calculatorBox}>
                 <div style={styles.calculatorTitle}>IF SETTLEMENT IS...</div>
@@ -682,19 +664,16 @@ export default function Home() {
                   const { tokens, accuracy } = calculateTokens(selectedBreakpoint, amount, settlement);
                   const isSelected = i === 1;
                   return (
-                    <div 
-                      key={i} 
-                      style={{
-                        ...styles.calculatorRow,
-                        ...(isSelected ? styles.calculatorHighlight : {}),
-                      }}
-                    >
+                    <div key={i} style={{
+                      ...styles.calculatorRow,
+                      ...(isSelected ? styles.calculatorHighlight : {}),
+                    }}>
                       <span style={styles.calculatorPrice}>{formatPrice(settlement)}</span>
                       <span style={{
                         ...styles.calculatorTokens,
                         color: isSelected ? '#22c55e' : '#fff',
                       }}>
-                        {(tokens / 1000000).toFixed(1)}M tokens
+                        {(tokens / 1000000).toFixed(1)}M
                       </span>
                       <span style={styles.calculatorAccuracy}>
                         {(accuracy * 100).toFixed(0)}%
@@ -705,7 +684,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               onClick={handlePlaceBet}
               style={{
