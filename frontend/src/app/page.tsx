@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useModal, usePhantom } from '@phantom/react-sdk';
+import { Header } from '@/components/Header';
 
 // Mock data for bets at different price levels
 const PRICE_LEVELS = [
@@ -25,6 +26,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '16px',
+    paddingTop: '76px',
   },
   container: {
     width: '100%',
@@ -203,8 +205,10 @@ export default function Home() {
   };
 
   return (
-    <main style={styles.main}>
-      <div style={styles.container}>
+    <>
+      <Header />
+      <main style={styles.main}>
+        <div style={styles.container}>
         
         {/* Left - Chart */}
         <div style={styles.chartPanel}>
@@ -320,8 +324,9 @@ export default function Home() {
           >
             {!isConnected ? 'CONNECT WALLET' : selectedBreakpoint ? 'PLACE BET' : 'SELECT A BREAKPOINT'}
           </button>
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

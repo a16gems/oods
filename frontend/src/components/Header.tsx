@@ -1,82 +1,131 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useModal, usePhantom, useAccounts, useDisconnect } from '@phantom/react-sdk';
-import { useState } from 'react';
+import Link from 'next/link';
+
+const styles = {
+  header: {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '60px',
+    backgroundColor: '#000',
+    borderBottom: '1px solid #222',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 24px',
+    zIndex: 1000,
+  },
+  logo: {
+    color: '#22c55e',
+    fontSize: '20px',
+    fontWeight: 700,
+    letterSpacing: '0.1em',
+    textDecoration: 'none',
+  },
+  walletSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  balanceBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    border: '1px solid #333',
+    color: '#fff',
+    cursor: 'pointer',
+    textDecoration: 'none',
+  },
+  balanceAmount: {
+    color: '#22c55e',
+    fontFamily: 'monospace',
+  },
+  connectBtn: {
+    padding: '8px 16px',
+    backgroundColor: '#22c55e',
+    border: 'none',
+    color: '#000',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  address: {
+    color: '#666',
+    fontSize: '12px',
+    fontFamily: 'monospace',
+  },
+};
 
 export function Header() {
   const { open } = useModal();
   const { isConnected, isLoading } = usePhantom();
   const accounts = useAccounts();
   const { disconnect } = useDisconnect();
-  const [showMenu, setShowMenu] = useState(false);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
-  // Get the first Solana address from accounts
   const solanaAddress = accounts && accounts.length > 0 ? accounts[0].address : '';
   const truncatedAddress = solanaAddress 
     ? `${solanaAddress.slice(0, 4)}...${solanaAddress.slice(-4)}`
     : '';
 
+  useEffect(() => {
+    async function fetchBalance() {
+      if (!solanaAddress) {
+        setBalance(null);
+        return;
+      }
+
+      setLoadingBalance(true);
+      try {
+        const res = await fetch(`/api/balance?address=${solanaAddress}`);
+        const data = await res.json();
+        if (data.balance !== undefined) {
+          setBalance(data.balance);
+        }
+      } catch (err) {
+        console.error('Failed to fetch balance:', err);
+      } finally {
+        setLoadingBalance(false);
+      }
+    }
+
+    fetchBalance();
+  }, [solanaAddress]);
+
+  const formatBalance = (bal: number) => {
+    if (bal >= 1000) {
+      return `${(bal / 1000).toFixed(2)}K`;
+    }
+    return bal.toFixed(4);
+  };
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold gradient-text">OODS</span>
-          </div>
+    <header style={styles.header}>
+      <Link href="/" style={styles.logo}>
+        OODS
+      </Link>
 
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#predict" className="text-white/70 hover:text-white transition-colors">
-              Predict
-            </a>
-            <a href="#how-it-works" className="text-white/70 hover:text-white transition-colors">
-              How It Works
-            </a>
-            <a href="https://oods.to" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-white transition-colors">
-              About
-            </a>
-          </nav>
-
-          {/* Wallet Button */}
-          <div className="relative">
-            {isLoading ? (
-              <button className="px-4 py-2 bg-white/10 rounded-lg text-white/50 cursor-wait">
-                Loading...
-              </button>
-            ) : isConnected ? (
-              <div>
-                <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 transition-all"
-                >
-                  <span className="w-2 h-2 bg-[#00ff88] rounded-full"></span>
-                  {truncatedAddress}
-                </button>
-                {showMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-[#0a0a0a] border border-white/10 rounded-lg shadow-xl">
-                    <button
-                      onClick={() => {
-                        disconnect();
-                        setShowMenu(false);
-                      }}
-                      className="w-full px-4 py-3 text-left text-red-400 hover:bg-white/5 rounded-lg transition-colors"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button
-                onClick={open}
-                className="px-6 py-2 bg-[#00ff88] text-black font-semibold rounded-lg hover:bg-[#00cc6a] transition-all glow-hover"
-              >
-                Connect Wallet
-              </button>
-            )}
-          </div>
-        </div>
+      <div style={styles.walletSection}>
+        {isLoading ? (
+          <span style={{ color: '#666' }}>Loading...</span>
+        ) : isConnected ? (
+          <Link href="/profile" style={styles.balanceBtn}>
+            <span style={styles.balanceAmount}>
+              {loadingBalance ? '...' : balance !== null ? `${formatBalance(balance)} SOL` : '-- SOL'}
+            </span>
+            <span style={styles.address}>{truncatedAddress}</span>
+          </Link>
+        ) : (
+          <button onClick={open} style={styles.connectBtn}>
+            CONNECT WALLET
+          </button>
+        )}
       </div>
     </header>
   );
