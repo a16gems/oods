@@ -27,3 +27,41 @@ body {
   color: #ffffff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+
+/* Mobile responsive overrides */
+@media (max-width: 768px) {
+  /* Stack content vertically on mobile */
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  
+  /* Full width panels on mobile */
+  .mobile-full {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  
+  /* Smaller text on mobile */
+  .mobile-text-sm {
+    font-size: 12px !important;
+  }
+  
+  /* Hide on mobile */
+  .mobile-hide {
+    display: none !important;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+}
