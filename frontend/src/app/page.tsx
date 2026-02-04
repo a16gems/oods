@@ -36,7 +36,7 @@ const styles = {
     flex: 1,
     backgroundColor: '#000',
     border: '1px solid #333',
-    borderRadius: '8px',
+    borderRadius: 0,
     padding: '24px',
   },
   chartHeader: {
@@ -53,7 +53,7 @@ const styles = {
   orangeDot: {
     width: '8px',
     height: '8px',
-    borderRadius: '50%',
+    borderRadius: 0,
     backgroundColor: '#f97316',
   },
   headerText: {
@@ -97,7 +97,7 @@ const styles = {
     transform: 'translateY(-50%)',
     width: '12px',
     height: '12px',
-    borderRadius: '50%',
+    borderRadius: 0,
   },
   betCounts: {
     width: '96px',
@@ -109,7 +109,7 @@ const styles = {
     width: '320px',
     backgroundColor: '#000',
     border: '1px solid #333',
-    borderRadius: '8px',
+    borderRadius: 0,
     padding: '24px',
   },
   panelTitle: {
@@ -140,7 +140,7 @@ const styles = {
   toggleBtn: {
     flex: 1,
     padding: '12px',
-    borderRadius: '4px',
+    borderRadius: 0,
     fontWeight: 600,
     cursor: 'pointer',
     border: 'none',
@@ -159,7 +159,7 @@ const styles = {
   amountBtn: {
     flex: 1,
     padding: '12px',
-    borderRadius: '4px',
+    borderRadius: 0,
     fontFamily: 'monospace',
     cursor: 'pointer',
     border: 'none',
@@ -168,7 +168,7 @@ const styles = {
   submitBtn: {
     width: '100%',
     padding: '16px',
-    borderRadius: '4px',
+    borderRadius: 0,
     fontWeight: 600,
     cursor: 'pointer',
     border: 'none',
