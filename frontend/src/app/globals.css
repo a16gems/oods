@@ -1,15 +1,5 @@
 @import "tailwindcss";
 
-:root {
-  --background: #000000;
-  --foreground: #ffffff;
-  --accent: #00ff88;
-  --accent-dim: #00cc6a;
-  --card-bg: #0a0a0a;
-  --border: #1a1a1a;
-  --text-secondary: #888888;
-}
-
 * {
   box-sizing: border-box;
   padding: 0;
@@ -20,14 +10,9 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  background: var(--background);
-  color: var(--foreground);
+  background: #000000;
+  color: #ffffff;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
 }
 
 /* Custom scrollbar */
@@ -36,52 +21,10 @@ a {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: #000;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #333;
   border-radius: 3px;
-}
-
-/* Animations */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s infinite;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.5s ease-out;
-}
-
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(90deg, #00ff88, #00ccff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Glow effects */
-.glow {
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
-}
-
-.glow-hover:hover {
-  box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
 }
