@@ -17,6 +17,165 @@ const PRICE_LEVELS = [
 
 const AMOUNTS = [0.5, 1, 2, 5];
 
+const styles = {
+  main: {
+    minHeight: '100vh',
+    backgroundColor: '#000',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '16px',
+  },
+  container: {
+    width: '100%',
+    maxWidth: '1200px',
+    display: 'flex',
+    gap: '16px',
+  },
+  chartPanel: {
+    flex: 1,
+    backgroundColor: '#000',
+    border: '1px solid #333',
+    borderRadius: '8px',
+    padding: '24px',
+  },
+  chartHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '24px',
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  orangeDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#f97316',
+  },
+  headerText: {
+    color: '#666',
+    fontSize: '12px',
+    letterSpacing: '0.05em',
+  },
+  betsCount: {
+    color: '#666',
+    fontSize: '14px',
+  },
+  priceRow: {
+    display: 'flex',
+    alignItems: 'center',
+    height: '48px',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+  },
+  priceLabel: {
+    width: '64px',
+    color: '#666',
+    fontSize: '14px',
+    fontFamily: 'monospace',
+  },
+  dotsArea: {
+    flex: 1,
+    position: 'relative' as const,
+    height: '100%',
+  },
+  horizontalLine: {
+    position: 'absolute' as const,
+    top: '50%',
+    left: 0,
+    right: '80px',
+    height: '1px',
+    backgroundColor: '#222',
+  },
+  dot: {
+    position: 'absolute' as const,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+  },
+  betCounts: {
+    width: '96px',
+    textAlign: 'right' as const,
+    fontSize: '12px',
+    fontFamily: 'monospace',
+  },
+  betPanel: {
+    width: '320px',
+    backgroundColor: '#000',
+    border: '1px solid #333',
+    borderRadius: '8px',
+    padding: '24px',
+  },
+  panelTitle: {
+    color: '#fff',
+    fontSize: '18px',
+    fontWeight: 600,
+    letterSpacing: '0.05em',
+    marginBottom: '24px',
+  },
+  label: {
+    color: '#666',
+    fontSize: '12px',
+    letterSpacing: '0.05em',
+    marginBottom: '8px',
+    display: 'block',
+  },
+  breakpointValue: {
+    color: '#fff',
+    fontSize: '24px',
+    fontFamily: 'monospace',
+    marginBottom: '24px',
+  },
+  toggleContainer: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '8px',
+  },
+  toggleBtn: {
+    flex: 1,
+    padding: '12px',
+    borderRadius: '4px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.2s',
+  },
+  predictionHint: {
+    color: '#444',
+    fontSize: '14px',
+    marginBottom: '24px',
+  },
+  amountContainer: {
+    display: 'flex',
+    gap: '8px',
+    marginBottom: '24px',
+  },
+  amountBtn: {
+    flex: 1,
+    padding: '12px',
+    borderRadius: '4px',
+    fontFamily: 'monospace',
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.2s',
+  },
+  submitBtn: {
+    width: '100%',
+    padding: '16px',
+    borderRadius: '4px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.2s',
+  },
+};
+
 export default function Home() {
   const { open } = useModal();
   const { isConnected } = usePhantom();
@@ -24,9 +183,9 @@ export default function Home() {
   const [selectedBreakpoint, setSelectedBreakpoint] = useState<number | null>(null);
   const [prediction, setPrediction] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState<number>(1);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   const totalBets = PRICE_LEVELS.reduce((sum, level) => sum + level.yes + level.no, 0);
-  const selectedLevel = PRICE_LEVELS.find(l => l.price === selectedBreakpoint);
 
   const formatPrice = (price: number) => {
     if (price >= 1000) {
@@ -40,62 +199,57 @@ export default function Home() {
       open();
       return;
     }
-    // TODO: Place bet logic
     alert(`Demo: Placing ${prediction.toUpperCase()} bet of ${amount} SOL at ${formatPrice(selectedBreakpoint!)}`);
   };
 
   return (
-    <main className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-4">
+    <main style={styles.main}>
+      <div style={styles.container}>
         
         {/* Left - Chart */}
-        <div className="flex-1 bg-black border border-zinc-800 rounded-lg p-6">
-          {/* Chart Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-              <span className="text-zinc-500 text-xs tracking-wider">CLICK TO SELECT BREAKPOINT</span>
+        <div style={styles.chartPanel}>
+          <div style={styles.chartHeader}>
+            <div style={styles.headerLeft}>
+              <span style={styles.orangeDot}></span>
+              <span style={styles.headerText}>CLICK TO SELECT BREAKPOINT</span>
             </div>
-            <span className="text-zinc-500 text-sm">{totalBets} bets</span>
+            <span style={styles.betsCount}>{totalBets} bets</span>
           </div>
 
-          {/* Chart Area */}
-          <div className="relative">
-            {PRICE_LEVELS.map((level, index) => (
+          <div>
+            {PRICE_LEVELS.map((level) => (
               <div 
                 key={level.price}
                 onClick={() => setSelectedBreakpoint(level.price)}
-                className={`flex items-center h-12 cursor-pointer transition-all hover:bg-zinc-900/50 ${
-                  selectedBreakpoint === level.price ? 'bg-zinc-900' : ''
-                }`}
+                onMouseEnter={() => setHoveredRow(level.price)}
+                onMouseLeave={() => setHoveredRow(null)}
+                style={{
+                  ...styles.priceRow,
+                  backgroundColor: selectedBreakpoint === level.price 
+                    ? '#111' 
+                    : hoveredRow === level.price 
+                      ? '#0a0a0a' 
+                      : 'transparent',
+                }}
               >
-                {/* Price Label */}
-                <div className="w-16 text-zinc-500 text-sm font-mono">
-                  {formatPrice(level.price)}
-                </div>
-
-                {/* Dots Area */}
-                <div className="flex-1 relative h-full">
-                  {/* Horizontal line */}
-                  <div className="absolute top-1/2 left-0 right-20 h-px bg-zinc-800/50"></div>
-                  
-                  {/* Dots */}
+                <div style={styles.priceLabel}>{formatPrice(level.price)}</div>
+                <div style={styles.dotsArea}>
+                  <div style={styles.horizontalLine}></div>
                   {level.dots.map((dot, dotIndex) => (
                     <div
                       key={dotIndex}
-                      className={`absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full ${
-                        dot.type === 'yes' ? 'bg-green-500' : 'bg-red-500'
-                      }`}
-                      style={{ left: `${dot.x}%` }}
+                      style={{
+                        ...styles.dot,
+                        backgroundColor: dot.type === 'yes' ? '#22c55e' : '#ef4444',
+                        left: `${dot.x}%`,
+                      }}
                     ></div>
                   ))}
                 </div>
-
-                {/* Bet Counts */}
-                <div className="w-24 text-right text-xs font-mono">
-                  {level.yes > 0 && <span className="text-green-500">{level.yes} YES</span>}
-                  {level.yes > 0 && level.no > 0 && <span className="text-zinc-600"> </span>}
-                  {level.no > 0 && <span className="text-red-500">{level.no} NO</span>}
+                <div style={styles.betCounts}>
+                  {level.yes > 0 && <span style={{ color: '#22c55e' }}>{level.yes} YES</span>}
+                  {level.yes > 0 && level.no > 0 && <span style={{ color: '#333' }}> </span>}
+                  {level.no > 0 && <span style={{ color: '#ef4444' }}>{level.no} NO</span>}
                 </div>
               </div>
             ))}
@@ -103,78 +257,66 @@ export default function Home() {
         </div>
 
         {/* Right - Bet Panel */}
-        <div className="w-full lg:w-80 bg-black border border-zinc-800 rounded-lg p-6">
-          <h2 className="text-white text-lg font-semibold tracking-wide mb-6">PLACE YOUR BET</h2>
+        <div style={styles.betPanel}>
+          <h2 style={styles.panelTitle}>PLACE YOUR BET</h2>
 
-          {/* Selected Breakpoint */}
-          <div className="mb-6">
-            <label className="text-zinc-500 text-xs tracking-wider block mb-2">SELECTED BREAKPOINT</label>
-            <div className="text-white text-2xl font-mono">
-              {selectedBreakpoint ? formatPrice(selectedBreakpoint) : 'Click chart to select'}
-            </div>
+          <label style={styles.label}>SELECTED BREAKPOINT</label>
+          <div style={styles.breakpointValue}>
+            {selectedBreakpoint ? formatPrice(selectedBreakpoint) : 'Click chart to select'}
           </div>
 
-          {/* Prediction Toggle */}
-          <div className="mb-6">
-            <label className="text-zinc-500 text-xs tracking-wider block mb-2">YOUR PREDICTION</label>
-            <div className="flex gap-2">
+          <label style={styles.label}>YOUR PREDICTION</label>
+          <div style={styles.toggleContainer}>
+            <button
+              onClick={() => setPrediction('yes')}
+              style={{
+                ...styles.toggleBtn,
+                backgroundColor: prediction === 'yes' ? '#22c55e' : '#333',
+                color: prediction === 'yes' ? '#000' : '#888',
+              }}
+            >
+              YES
+            </button>
+            <button
+              onClick={() => setPrediction('no')}
+              style={{
+                ...styles.toggleBtn,
+                backgroundColor: prediction === 'no' ? '#ef4444' : '#333',
+                color: prediction === 'no' ? '#000' : '#888',
+              }}
+            >
+              NO
+            </button>
+          </div>
+          <p style={styles.predictionHint}>
+            Price will be {prediction === 'yes' ? '≥' : '<'} {selectedBreakpoint ? formatPrice(selectedBreakpoint) : '?'}
+          </p>
+
+          <label style={styles.label}>AMOUNT (SOL)</label>
+          <div style={styles.amountContainer}>
+            {AMOUNTS.map((amt) => (
               <button
-                onClick={() => setPrediction('yes')}
-                className={`flex-1 py-3 rounded font-semibold transition-all ${
-                  prediction === 'yes'
-                    ? 'bg-green-500 text-black'
-                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                }`}
+                key={amt}
+                onClick={() => setAmount(amt)}
+                style={{
+                  ...styles.amountBtn,
+                  backgroundColor: amount === amt ? '#f97316' : '#333',
+                  color: amount === amt ? '#000' : '#888',
+                }}
               >
-                YES
+                {amt}
               </button>
-              <button
-                onClick={() => setPrediction('no')}
-                className={`flex-1 py-3 rounded font-semibold transition-all ${
-                  prediction === 'no'
-                    ? 'bg-red-500 text-black'
-                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                }`}
-              >
-                NO
-              </button>
-            </div>
-            <p className="text-zinc-600 text-sm mt-2">
-              Price will be {prediction === 'yes' ? '≥' : '<'} {selectedBreakpoint ? formatPrice(selectedBreakpoint) : '?'}
-            </p>
+            ))}
           </div>
 
-          {/* Amount */}
-          <div className="mb-6">
-            <label className="text-zinc-500 text-xs tracking-wider block mb-2">AMOUNT (SOL)</label>
-            <div className="flex gap-2">
-              {AMOUNTS.map((amt) => (
-                <button
-                  key={amt}
-                  onClick={() => setAmount(amt)}
-                  className={`flex-1 py-3 rounded font-mono transition-all ${
-                    amount === amt
-                      ? 'bg-orange-500 text-black'
-                      : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
-                  }`}
-                >
-                  {amt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Submit Button */}
           <button
             onClick={handlePlaceBet}
-            disabled={!selectedBreakpoint && isConnected}
-            className={`w-full py-4 rounded font-semibold transition-all ${
-              !isConnected
-                ? 'bg-green-500 text-black hover:bg-green-400'
-                : selectedBreakpoint
-                  ? 'bg-green-500 text-black hover:bg-green-400'
-                  : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-            }`}
+            style={{
+              ...styles.submitBtn,
+              backgroundColor: !isConnected || selectedBreakpoint ? '#22c55e' : '#333',
+              color: !isConnected || selectedBreakpoint ? '#000' : '#666',
+              cursor: !isConnected || selectedBreakpoint ? 'pointer' : 'not-allowed',
+            }}
           >
             {!isConnected ? 'CONNECT WALLET' : selectedBreakpoint ? 'PLACE BET' : 'SELECT A BREAKPOINT'}
           </button>
